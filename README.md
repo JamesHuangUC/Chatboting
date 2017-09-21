@@ -22,4 +22,4 @@ Open your messenger app, and scan the QR Code below for trying this bot by askin
 ## Acknowledgements
 
 * Some parts of this sample application were inspired by these excellent 
-  [fb-apiai-bot-demo Repositories](https://github.com/girliemac/fb-apiai-bot-demo/tree/tutorial-01) by *Tomomi Imura*.
+  [fb-apiai-bot-demo repositories](https://github.com/girliemac/fb-apiai-bot-demo/tree/tutorial-01) by *Tomomi Imura*.
