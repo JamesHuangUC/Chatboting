@@ -5,7 +5,7 @@ Open your messenger app, and scan the QR Code below for trying this bot by askin
 
 
 
-![Facebook scan code](./Pictures/qrCode.png =250x250)
+<img src="./Pictures/qrCode.png" alt="qrCode" width="300" height="300" />
 
 
 
@@ -19,8 +19,7 @@ Open your messenger app, and scan the QR Code below for trying this bot by askin
 
 
 
-
-#### Acknowledgements
+## Acknowledgements
 
 * Some parts of this sample application were inspired by these excellent 
   [fb-apiai-bot-demo Repositories](https://github.com/girliemac/fb-apiai-bot-demo/tree/tutorial-01) by *Tomomi Imura*.
