@@ -5,7 +5,7 @@ Open your messenger app, and scan the QR Code below for trying this bot by askin
 
 
 
-![Facebook scan code](https://raw.githubusercontent.com/JamesHuangUC/Chatboting/master/Pictures/qrCode.png)
+![Facebook scan code](./Pictures/qrCode.png =250x250)
 
 
 
