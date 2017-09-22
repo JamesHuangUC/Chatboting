@@ -105,6 +105,9 @@ function receivedMessage(event) {
 
           if (response.result.metadata.intentName === 'images.search') {
             aiText.includes("http")? sendImage(senderID, aiText) : sendTextMessage(senderID, aiText);
+          } else if (response.result.metadata.intentName === 'courses.schedule'){
+            console.log("GGG");
+            sendTextMessage(senderID, aiText);
           } else {
             sendTextMessage(senderID, aiText);
           }
@@ -310,6 +313,36 @@ app.post('/ai', (req, res) => {
           }
       }
     );
+  }
+
+  if (req.body.result.action === 'schedule') {
+    console.log('*** schedule ***');
+    let course = req.body.result.parameters['course-name'];
+    let restUrl = 'http://chatboting.azurewebsites.net/api/ucsc?Course='+course;
+    restUrl = restUrl.replace(/ /g, "%20");
+    console.log(`TEST ${restUrl}`);
+
+    request.get(restUrl, (err, response, body) => {
+      if (!err && response.statusCode == 200 && course) {
+        let json = JSON.parse(body);
+        console.log(json);
+        let schedule = json[0].Schedule;
+        let msg = `${json[0].Course[0]}\'s schedule is ${schedule}.`;
+        return res.json({
+          speech: msg,
+          displayText: msg,
+          source: 'schedule'
+        });
+      } else {
+        let errorMessage = 'I failed to look up the course schedule.';
+        return res.status(400).json({
+          status: {
+            code: 400,
+            errorType: errorMessage
+          }
+        });
+      }
+    });
   }
 
 });
