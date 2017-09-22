@@ -9,6 +9,7 @@ const token = process.env.FB_PAGE_ACCESS_TOKEN;
 const access = process.env.FB_ACCESS_TOKEN;
 const APIAI_TOKEN = process.env.APIAI_TOKEN;
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
+const GETTY_IMAGES_API_KEY = process.env.GETTY_IMAGES_API_KEY;
 
 const apiaiApp = apiai(APIAI_TOKEN);
 
@@ -75,12 +76,17 @@ function receivedMessage(event) {
 
   console.log("Received message for user %d and page %d at %d with message:", 
     senderID, recipientID, timeOfMessage);
-  console.log(JSON.stringify(message));
+  console.log("BBB: "+JSON.stringify(message));
 
   var messageId = message.mid;
 
   var messageText = message.text;
   var messageAttachments = message.attachments;
+
+  // Handle API.AI
+  const apiaiHandle = apiaiApp.textRequest(messageText, {
+      sessionId: 'randomSessionId'
+  });
 
   if (messageText) {
 
@@ -92,14 +98,33 @@ function receivedMessage(event) {
         break;
 
       default:
-        sendTextMessage(senderID, messageText);
+        apiaiHandle.on('response', function(response) {
+          console.log("CCC: "+response);
+
+          let aiText = response.result.fulfillment.speech;
+
+          if (response.result.metadata.intentName === 'images.search') {
+            aiText.includes("http")? sendImage(senderID, aiText) : sendTextMessage(senderID, aiText);
+          } else {
+            sendTextMessage(senderID, aiText);
+          }
+        });
+
+        apiaiHandle.on('error', function(error) {
+          console.log(error);
+        });
+        apiaiHandle.end();
     }
-  } else if (messageAttachments) {
+  }
+    
+  else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
-}
+} 
+
 
 function sendGenericMessage(recipientId, messageText) {
+  console.log("DDD");
     var messageData = {
     recipient: {
       id: recipientId
@@ -146,36 +171,20 @@ function sendGenericMessage(recipientId, messageText) {
   callSendAPI(messageData);
 }
 
-function sendTextMessage(recipientId, messageText) {
 
-  // Handle API.AI
-  let apiaiHandle = apiaiApp.textRequest(messageText, {
-      sessionId: 'randomSessionId'
-  });
-
-  apiaiHandle.on('response', function(response) {
-    console.log(response);
-
-    let aiText = response.result.fulfillment.speech;
-
-    var messageData = {
-      recipient: {
-        id: recipientId
-      },
-      message: {
-        text: aiText
-      }
-    };
-
-    callSendAPI(messageData);
-  });
-
-  apiaiHandle.on('error', function(error) {
-    console.log(error);
-  });
-
-  apiaiHandle.end();
+function sendTextMessage(recipientId, aiText) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: aiText
+    }
+  };
+  console.log("EEE");
+  callSendAPI(messageData);
 }
+
 
 function callSendAPI(messageData) {
   request({
@@ -188,6 +197,7 @@ function callSendAPI(messageData) {
     if (!error && response.statusCode == 200) {
       var recipientId = body.recipient_id;
       var messageId = body.message_id;
+      console.log("FFF");
 
       console.log("Successfully sent generic message with id %s to recipient %s", 
         messageId, recipientId);
@@ -198,6 +208,38 @@ function callSendAPI(messageData) {
     }
   });  
 }
+
+
+const sendImage = (senderId, imageUri) => {
+  return request({
+    url: 'https://graph.facebook.com/v2.6/me/messages',
+    qs: { access_token: access },
+    method: 'POST',
+    json: {
+      recipient: { id: senderId },
+      message: {
+        attachment: {
+            type: 'image',
+            payload: { url: imageUri }
+        }
+      }
+    }
+  }, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var recipientId = body.recipient_id;
+      var messageId = body.message_id;
+      console.log("FFF");
+
+      console.log("Successfully sent generic image with id %s to recipient %s", 
+        messageId, recipientId);
+    } else {
+      console.error("Unable to send image.");
+      console.error(response);
+      console.error(error);
+    }
+  });
+};
+
 
 // Spin up the server
 app.listen(app.get('port'), function() {
@@ -238,6 +280,36 @@ app.post('/ai', (req, res) => {
         });
       }
     });
+  }
+
+  if (req.body.result.action === 'image') {
+    const imageName = req.body.result.parameters['image_name'];
+    const apiUrl = 'https://api.gettyimages.com/v3/search/images?fields=id,title,thumb,referral_destinations&sort_order=best&phrase=' + imageName;
+
+    request({
+      uri: apiUrl,
+      methos: 'GET',
+      headers: {'Api-Key': GETTY_IMAGES_API_KEY}
+      }, (err, response, body) => 
+      {
+        if (!err && response.statusCode == 200) {
+          const imageUri = JSON.parse(body).images[0].display_sizes[0].uri;
+          return res.json({
+              speech: imageUri,
+              displayText: imageUri,
+              source: 'image_name'
+          });
+        } else {
+            let errorMessage = 'I failed to look up the picture.';
+            return res.status(400).json({
+              status: {
+                code: 400,
+                errorType: errorMessage
+              }
+            });
+          }
+      }
+    );
   }
 
 });
