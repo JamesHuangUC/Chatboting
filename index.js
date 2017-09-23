@@ -289,13 +289,15 @@ app.post('/ai', (req, res) => {
     const imageName = req.body.result.parameters['image_name'];
     const apiUrl = 'https://api.gettyimages.com/v3/search/images?fields=id,title,thumb,referral_destinations&sort_order=best&phrase=' + imageName;
 
+    console.log(apiUrl);
+    
     request({
       uri: apiUrl,
       methos: 'GET',
       headers: {'Api-Key': GETTY_IMAGES_API_KEY}
       }, (err, response, body) => 
       {
-        if (!err && response.statusCode == 200) {
+        if (!err && response.statusCode == 200 && JSON.parse(body).images[0]) {
           const imageUri = JSON.parse(body).images[0].display_sizes[0].uri;
           return res.json({
               speech: imageUri,
@@ -317,7 +319,7 @@ app.post('/ai', (req, res) => {
 
   if (req.body.result.action === 'schedule') {
     console.log('*** schedule ***');
-    let course = req.body.result.parameters['course-name'];
+    let course = req.body.result.parameters['course_name'];
     let restUrl = 'http://chatboting.azurewebsites.net/api/ucsc?Course='+course;
     restUrl = restUrl.replace(/ /g, "%20");
     console.log(`TEST ${restUrl}`);
@@ -325,14 +327,26 @@ app.post('/ai', (req, res) => {
     request.get(restUrl, (err, response, body) => {
       if (!err && response.statusCode == 200 && course) {
         let json = JSON.parse(body);
-        console.log(json);
-        let schedule = json[0].Schedule;
-        let msg = `${json[0].Course[0]}\'s schedule is ${schedule}.`;
-        return res.json({
-          speech: msg,
-          displayText: msg,
-          source: 'schedule'
-        });
+        let msg = "";
+
+        if (json.length > 1) {
+          json.forEach((e,i) =>{
+            msg += `Section ${i+1}: ${e.Schedule}\n`;});
+          return res.json({
+            speech: msg,
+            displayText: msg,
+            source: 'schedule'
+          });
+        } else{
+          let schedule = json[0].Schedule;
+          msg = `${json[0].Course[0]}\'s schedule is ${schedule}.`; 
+          return res.json({
+            speech: msg,
+            displayText: msg,
+            source: 'schedule'
+          });
+        }
+
       } else {
         let errorMessage = 'I failed to look up the course schedule.';
         return res.status(400).json({
