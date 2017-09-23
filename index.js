@@ -108,6 +108,9 @@ function receivedMessage(event) {
           } else if (response.result.metadata.intentName === 'courses.schedule'){
             console.log("GGG");
             sendTextMessage(senderID, aiText);
+          } else if (response.result.metadata.intentName === 'courses.location'){
+            console.log("HHH");
+            sendTextMessage(senderID, aiText);
           } else {
             sendTextMessage(senderID, aiText);
           }
@@ -359,4 +362,47 @@ app.post('/ai', (req, res) => {
     });
   }
 
+  if (req.body.result.action === 'location') {
+    console.log('*** location ***');
+    let course = req.body.result.parameters['course_name'];
+    let restUrl = 'http://chatboting.azurewebsites.net/api/ucsc?Course='+course;
+    restUrl = restUrl.replace(/ /g, "%20");
+    console.log(`TEST ${restUrl}`);
+
+    request.get(restUrl, (err, response, body) => {
+      if (!err && response.statusCode == 200 && course) {
+        let json = JSON.parse(body);
+        let msg = "";
+
+        if (json.length > 1) {
+          json.forEach((e,i) =>{
+            msg += `Section ${i+1}: ${e.Location}\n`;});
+          return res.json({
+            speech: msg,
+            displayText: msg,
+            source: 'location'
+          });
+        } else{
+          let location = json[0].Location;
+          msg = `${json[0].Course[0]} is located in ${location}.`; 
+          return res.json({
+            speech: msg,
+            displayText: msg,
+            source: 'location'
+          });
+        }
+
+      } else {
+        let errorMessage = 'I failed to look up the course location.';
+        return res.status(400).json({
+          status: {
+            code: 400,
+            errorType: errorMessage
+          }
+        });
+      }
+    });
+  }
+
 });
+
