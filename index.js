@@ -117,6 +117,9 @@ function receivedMessage(event) {
           } else if (response.result.metadata.intentName === 'courses.ge'){
             console.log("JJJ");
             sendTextMessage(senderID, aiText);
+          } else if (response.result.metadata.intentName === 'courses.prerequisite'){
+            console.log("JJJ");
+            sendTextMessage(senderID, aiText);
           } else {
             sendTextMessage(senderID, aiText);
           }
@@ -465,27 +468,57 @@ app.post('/ai', (req, res) => {
     request.get(restUrl, (err, response, body) => {
       if (!err && response.statusCode == 200 && course) {
         let json = JSON.parse(body);
-        let msg = "";
-
-        if (json.length > 1) {
-            msg = `All ${json.length+1} sections fulfill ${json[0]['General Education']}.`;
-          return res.json({
-            speech: msg,
-            displayText: msg,
-            source: 'ge'
-          });
-        } else{
-          let ge = json[0]['General Education'];
-          msg = `${json[0].Course[0]} fulfills ${ge}.`; 
-          return res.json({
-            speech: msg,
-            displayText: msg,
-            source: 'ge'
-          });
+        let ge = json[0]['General Education'];
+        console.log(`TEST GE:${ge}.`);
+        let msg = '';
+        if ( !ge.replace(/\s/g, '').length ) {          
+          msg = `${json[0].Course[0]}\ doesn't fulfill any general education :(`;          
+        } else {
+          msg = `${json[0].Course[0]}\ fulfills ${ge}.`;
         }
-
+        return res.json({
+          speech: msg,
+          displayText: msg,
+          source: 'ge'
+        });
       } else {
-        let errorMessage = 'I failed to look up the course ge.';
+        let errorMessage = 'I failed to look up the course general education.';
+        return res.status(400).json({
+          status: {
+            code: 400,
+            errorType: errorMessage
+          }
+        });
+      }
+    });
+  }
+
+  if (req.body.result.action === 'prerequisite') {
+    console.log('*** prerequisite ***');
+    let course = req.body.result.parameters['course_name'];
+    let restUrl = 'http://chatboting.azurewebsites.net/api/ucsc?Course='+course;
+    restUrl = restUrl.replace(/ /g, "%20");
+    console.log(`TEST ${restUrl}`);
+
+    request.get(restUrl, (err, response, body) => {
+      if (!err && response.statusCode == 200 && course) {
+        let json = JSON.parse(body);
+        let prerequisite = json[0].Prerequisite;
+        let msg = '';
+        if (prerequisite === ' ') {
+          msg = `${json[0].Course[0]}\ doesn't have any prerequisite :)`;
+        } else {
+          msg = `${json[0].Course[0]}\'s prerequisite:\n${prerequisite}`;
+        }
+        return res.json({
+          speech: msg,
+          displayText: msg,
+          source: 'prerequisite'
+        });
+      }
+
+      else {
+        let errorMessage = 'I failed to look up the course prerequisite.';
         return res.status(400).json({
           status: {
             code: 400,
