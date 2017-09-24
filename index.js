@@ -114,6 +114,9 @@ function receivedMessage(event) {
           } else if (response.result.metadata.intentName === 'courses.professor'){
             console.log("III");
             sendTextMessage(senderID, aiText);
+          } else if (response.result.metadata.intentName === 'courses.ge'){
+            console.log("JJJ");
+            sendTextMessage(senderID, aiText);
           } else {
             sendTextMessage(senderID, aiText);
           }
@@ -442,6 +445,47 @@ app.post('/ai', (req, res) => {
 
       } else {
         let errorMessage = 'I failed to look up the course professor.';
+        return res.status(400).json({
+          status: {
+            code: 400,
+            errorType: errorMessage
+          }
+        });
+      }
+    });
+  }
+
+  if (req.body.result.action === 'ge') {
+    console.log('*** ge ***');
+    let course = req.body.result.parameters['course_name'];
+    let restUrl = 'http://chatboting.azurewebsites.net/api/ucsc?Course='+course;
+    restUrl = restUrl.replace(/ /g, "%20");
+    console.log(`TEST ${restUrl}`);
+
+    request.get(restUrl, (err, response, body) => {
+      if (!err && response.statusCode == 200 && course) {
+        let json = JSON.parse(body);
+        let msg = "";
+
+        if (json.length > 1) {
+            msg = `All ${json.length+1} sections fulfill ${json[0]['General Education']}.`;
+          return res.json({
+            speech: msg,
+            displayText: msg,
+            source: 'ge'
+          });
+        } else{
+          let ge = json[0]['General Education'];
+          msg = `${json[0].Course[0]} fulfills ${ge}.`; 
+          return res.json({
+            speech: msg,
+            displayText: msg,
+            source: 'ge'
+          });
+        }
+
+      } else {
+        let errorMessage = 'I failed to look up the course ge.';
         return res.status(400).json({
           status: {
             code: 400,
