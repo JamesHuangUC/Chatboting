@@ -260,6 +260,9 @@ app.post('/ai', (req, res) => {
   if (req.body.result.action === 'weather') {
     console.log('*** weather ***');
     let city = req.body.result.parameters['geo-city'];
+
+    if (city === 'Santa Cruz') city = city.concat(',us');
+
     let restUrl = 'http://api.openweathermap.org/data/2.5/weather?APPID='+WEATHER_API_KEY+'&q='+city;
     restUrl = restUrl.replace(/ /g, "-");
     console.log(`TEST ${restUrl}`);
